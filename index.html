@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building-Scale Green Roof Potential | Gdańsk</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Legend - Left side */
+        .legend {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1000;
+            min-width: 280px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-gradient {
+            height: 20px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .legend-gradient.potential {
+            background: linear-gradient(to right, #fee5d9, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #99000d);
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .legend-sublabels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #777;
+        }
+
+        .legend-scale-indicator {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            color: #888;
+        }
+
+        .legend-scale-indicator span {
+            color: #4ecdc4;
+            font-weight: 500;
+        }
+
+        /* Side Panel */
+        .side-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1000;
+            width: 260px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: "🏢";
+            font-size: 20px;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+        }
+
+        .panel-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .scenario-btn {
+            display: block;
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ccc;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .scenario-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .scenario-btn.active {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .scenario-btn .scenario-name {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .scenario-btn .scenario-desc {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .scenario-btn.active .scenario-desc {
+            color: rgba(78, 205, 196, 0.7);
+        }
+
+        .info-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background: rgba(78, 205, 196, 0.15);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 8px;
+            color: #4ecdc4;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .info-btn:hover {
+            background: rgba(78, 205, 196, 0.25);
+        }
+
+        /* Info Panel Overlay */
+        .info-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .info-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .info-panel {
+            background: rgba(26, 26, 46, 0.98);
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .info-overlay.visible .info-panel {
+            transform: translateY(0);
+        }
+
+        .info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .info-header-icon {
+            font-size: 32px;
+        }
+
+        .info-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .info-section {
+            margin-bottom: 24px;
+        }
+
+        .info-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4ecdc4;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-section h3 .icon {
+            font-size: 18px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item .icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .info-item-content {
+            flex: 1;
+        }
+
+        .info-item-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ddd;
+            margin-bottom: 2px;
+        }
+
+        .info-item-desc {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .color-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .color-preview-bar {
+            flex: 1;
+            height: 12px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #fee5d9, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #99000d);
+        }
+
+        .color-preview-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .explore-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .explore-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(78, 205, 196, 0.4);
+        }
+
+        /* Leaflet popup customization */
+        .leaflet-popup-content-wrapper {
+            background: rgba(26, 26, 46, 0.98);
+            color: #e0e0e0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(26, 26, 46, 0.98);
+        }
+
+        .leaflet-popup-content {
+            margin: 14px 16px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .popup-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .popup-label {
+            color: #888;
+        }
+
+        .popup-value {
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .popup-value.highlight {
+            color: #4ecdc4;
+        }
+
+        /* Loading indicator */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(78, 205, 196, 0.2);
+            border-top-color: #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dark map tiles adjustment */
+        .leaflet-tile-pane {
+            filter: brightness(0.85) contrast(1.1);
+        }
+
+        /* Zoom control styling */
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .leaflet-control-zoom a {
+            background: rgba(26, 26, 46, 0.95) !important;
+            color: #e0e0e0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: rgba(40, 40, 60, 0.95) !important;
+            color: #4ecdc4 !important;
+        }
+
+        /* Attribution styling */
+        .leaflet-control-attribution {
+            background: rgba(26, 26, 46, 0.8) !important;
+            color: #666 !important;
+            font-size: 10px;
+        }
+
+        .leaflet-control-attribution a {
+            color: #888 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading map data...</div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Legend -->
+    <div class="legend" id="legend">
+        <div class="legend-title" id="legendTitle">Green Roof Potential (GPS)</div>
+        <div class="legend-gradient potential" id="legendGradient"></div>
+        <div class="legend-labels" id="legendLabels">
+            <span>0</span>
+            <span>0.5</span>
+            <span>1</span>
+        </div>
+        <div class="legend-sublabels" id="legendSublabels">
+            <span>Low</span>
+            <span>Medium</span>
+            <span>High</span>
+        </div>
+        <div class="legend-sublabels" style="margin-top: 2px;">
+            <span>potential</span>
+            <span>potential</span>
+            <span>potential</span>
+        </div>
+        <div class="legend-scale-indicator">
+            Currently viewing: <span id="scaleIndicator">Districts</span>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="side-panel">
+        <div class="panel-title">Green Roof Potential</div>
+
+        <div class="panel-section">
+            <div class="panel-section-title">Select Scenario</div>
+            <button class="scenario-btn active" data-scenario="1">
+                <span class="scenario-name">Scenario 1</span>
+                <span class="scenario-desc">Baseline thresholds</span>
+            </button>
+            <button class="scenario-btn" data-scenario="2">
+                <span class="scenario-name">Scenario 2</span>
+                <span class="scenario-desc">Slope-weighted</span>
+            </button>
+            <button class="scenario-btn" data-scenario="3">
+                <span class="scenario-name">Scenario 3</span>
+                <span class="scenario-desc">Industrial excluded</span>
+            </button>
+        </div>
+
+        <button class="info-btn" id="infoBtn">
+            <span>ℹ️</span>
+            <span>How to use this map</span>
+        </button>
+    </div>
+
+    <!-- Info Panel Overlay -->
+    <div class="info-overlay" id="infoOverlay">
+        <div class="info-panel">
+            <div class="info-header">
+                <span class="info-header-icon">🏢</span>
+                <h2>Building-Scale Green Roof Potential</h2>
+            </div>
+
+            <div class="info-section">
+                <h3><span class="icon">🔍</span> How to explore</h3>
+                <div class="info-item">
+                    <span class="icon">🗺️</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Zoom out → Districts</div>
+                        <div class="info-item-desc">See aggregated potential by district</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="icon">📊</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Medium zoom → Grids</div>
+                        <div class="info-item-desc">View 500m grid cell analysis</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="icon">🏠</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Zoom in → Buildings</div>
+                        <div class="info-item-desc">Explore individual building scores</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="icon">🔄</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Switch scenarios</div>
+                        <div class="info-item-desc">Compare different analysis criteria</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3><span class="icon">🎨</span> What colors show</h3>
+                <div class="info-item">
+                    <div class="info-item-content" style="width: 100%;">
+                        <div class="info-item-desc">Colors indicate green roof suitability from low to high potential</div>
+                        <div class="color-preview">
+                            <div class="color-preview-bar"></div>
+                        </div>
+                        <div class="color-preview-labels">
+                            <span>Low potential</span>
+                            <span>High potential</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3><span class="icon">📋</span> Scenarios explained</h3>
+                <div class="info-item">
+                    <span class="icon">1️⃣</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Baseline thresholds</div>
+                        <div class="info-item-desc">Standard criteria for all buildings</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="icon">2️⃣</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Slope-weighted</div>
+                        <div class="info-item-desc">Extra weight on roof slope suitability</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="icon">3️⃣</span>
+                    <div class="info-item-content">
+                        <div class="info-item-title">Industrial excluded</div>
+                        <div class="info-item-desc">Industrial buildings removed from analysis</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="explore-btn" id="exploreBtn">
+                Explore the map →
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // =====================
+        // Configuration
+        // =====================
+        const CONFIG = {
+            mapCenter: [54.372, 18.638],
+            initialZoom: 11,
+            minZoom: 10,
+            maxZoom: 18,
+            zoomThresholds: {
+                district: 12,   // zoom < 12 shows districts
+                grid: 14        // zoom >= 12 and < 14 shows grids, >= 14 shows buildings
+            },
+            dataFiles: {
+                districts: 'data/combined_gdansk_districts_roof.geojson',
+                grids: 'data/combined_gdansk_grid.geojson',
+                buildings: {
+                    1: 'data/filtered_buildings_scenario1.geojson',
+                    2: 'data/filtered_buildings_scenario2.geojson',
+                    3: 'data/filtered_buildings_scenario3.geojson'
+                }
+            }
+        };
+
+        // Color scale for potential (0-1 or area-based)
+        const colorScale = [
+            { threshold: 0, color: '#fee5d9' },
+            { threshold: 0.15, color: '#fcbba1' },
+            { threshold: 0.3, color: '#fc9272' },
+            { threshold: 0.45, color: '#fb6a4a' },
+            { threshold: 0.6, color: '#ef3b2c' },
+            { threshold: 0.75, color: '#cb181d' },
+            { threshold: 0.9, color: '#99000d' }
+        ];
+
+        // =====================
+        // State
+        // =====================
+        let map;
+        let currentScenario = 1;
+        let currentScale = 'district';
+        let layers = {
+            district: null,
+            grid: null,
+            building: null
+        };
+        let data = {
+            districts: null,
+            grids: null,
+            buildings: { 1: null, 2: null, 3: null }
+        };
+        let maxAreaValues = {
+            district: { 1: 1, 2: 1, 3: 1 },
+            grid: { 1: 1, 2: 1, 3: 1 }
+        };
+
+        // =====================
+        // Helper Functions
+        // =====================
+        function getColor(value, maxValue = 1) {
+            const normalized = Math.min(value / maxValue, 1);
+            for (let i = colorScale.length - 1; i >= 0; i--) {
+                if (normalized >= colorScale[i].threshold) {
+                    return colorScale[i].color;
+                }
+            }
+            return colorScale[0].color;
+        }
+
+        function formatNumber(num, decimals = 2) {
+            if (num === undefined || num === null) return 'N/A';
+            return Number(num).toFixed(decimals);
+        }
+
+        // =====================
+        // Popup Generators
+        // =====================
+        function getBuildingPopup(properties) {
+            return `
+                <div class="popup-title">Building Details</div>
+                <div class="popup-row">
+                    <span class="popup-label">GPS Score</span>
+                    <span class="popup-value highlight">${formatNumber(properties.GPS_roof, 3)}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Slope</span>
+                    <span class="popup-value">${formatNumber(properties.Slope)}°</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Height</span>
+                    <span class="popup-value">${formatNumber(properties.Height)} m</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Roof Area</span>
+                    <span class="popup-value">${formatNumber(properties.roof_area)} m²</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Roof Perimeter</span>
+                    <span class="popup-value">${formatNumber(properties.roof_perimeter)} m</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Shape Ratio</span>
+                    <span class="popup-value">${formatNumber(properties.shape_ratio, 3)}</span>
+                </div>
+            `;
+        }
+
+        function getGridPopup(properties) {
+            const areaField = `suitable_area_km2_${currentScenario}`;
+            const area = properties[areaField];
+            return `
+                <div class="popup-title">Grid Cell</div>
+                <div class="popup-row">
+                    <span class="popup-label">Suitable Roof Area</span>
+                    <span class="popup-value highlight">${formatNumber(area, 4)} km²</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Scenario</span>
+                    <span class="popup-value">${currentScenario}</span>
+                </div>
+            `;
+        }
+
+        function getDistrictPopup(properties) {
+            const areaField = `suitable_area_km2_${currentScenario}`;
+            const area = properties[areaField];
+            const name = properties.name || properties.NAME || properties.district || 'District';
+            return `
+                <div class="popup-title">${name}</div>
+                <div class="popup-row">
+                    <span class="popup-label">Suitable Roof Area</span>
+                    <span class="popup-value highlight">${formatNumber(area, 4)} km²</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Scenario</span>
+                    <span class="popup-value">${currentScenario}</span>
+                </div>
+            `;
+        }
+
+        // =====================
+        // Layer Styles
+        // =====================
+        function getBuildingStyle(feature) {
+            const gps = feature.properties.GPS_roof || 0;
+            return {
+                fillColor: getColor(gps, 1),
+                weight: 0.5,
+                opacity: 1,
+                color: 'rgba(255, 255, 255, 0.3)',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getGridStyle(feature) {
+            const areaField = `suitable_area_km2_${currentScenario}`;
+            const area = feature.properties[areaField] || 0;
+            const maxArea = maxAreaValues.grid[currentScenario];
+            return {
+                fillColor: getColor(area, maxArea),
+                weight: 1,
+                opacity: 1,
+                color: 'rgba(255, 255, 255, 0.4)',
+                fillOpacity: 0.75
+            };
+        }
+
+        function getDistrictStyle(feature) {
+            const areaField = `suitable_area_km2_${currentScenario}`;
+            const area = feature.properties[areaField] || 0;
+            const maxArea = maxAreaValues.district[currentScenario];
+            return {
+                fillColor: getColor(area, maxArea),
+                weight: 2,
+                opacity: 1,
+                color: 'rgba(255, 255, 255, 0.5)',
+                fillOpacity: 0.7
+            };
+        }
+
+        // =====================
+        // Layer Management
+        // =====================
+        function createDistrictLayer() {
+            if (!data.districts) return null;
+            return L.geoJSON(data.districts, {
+                style: getDistrictStyle,
+                onEachFeature: (feature, layer) => {
+                    layer.bindPopup(getDistrictPopup(feature.properties));
+                    layer.on({
+                        mouseover: (e) => {
+                            e.target.setStyle({ weight: 3, color: '#4ecdc4' });
+                        },
+                        mouseout: (e) => {
+                            layers.district.resetStyle(e.target);
+                        }
+                    });
+                }
+            });
+        }
+
+        function createGridLayer() {
+            if (!data.grids) return null;
+            return L.geoJSON(data.grids, {
+                style: getGridStyle,
+                onEachFeature: (feature, layer) => {
+                    layer.bindPopup(getGridPopup(feature.properties));
+                    layer.on({
+                        mouseover: (e) => {
+                            e.target.setStyle({ weight: 2, color: '#4ecdc4' });
+                        },
+                        mouseout: (e) => {
+                            layers.grid.resetStyle(e.target);
+                        }
+                    });
+                }
+            });
+        }
+
+        function createBuildingLayer() {
+            if (!data.buildings[currentScenario]) return null;
+            return L.geoJSON(data.buildings[currentScenario], {
+                style: getBuildingStyle,
+                onEachFeature: (feature, layer) => {
+                    layer.bindPopup(getBuildingPopup(feature.properties));
+                    layer.on({
+                        mouseover: (e) => {
+                            e.target.setStyle({ weight: 2, color: '#4ecdc4' });
+                        },
+                        mouseout: (e) => {
+                            layers.building.resetStyle(e.target);
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateVisibleLayer() {
+            const zoom = map.getZoom();
+            let newScale;
+
+            if (zoom < CONFIG.zoomThresholds.district) {
+                newScale = 'district';
+            } else if (zoom < CONFIG.zoomThresholds.grid) {
+                newScale = 'grid';
+            } else {
+                newScale = 'building';
+            }
+
+            // Remove all layers first
+            Object.values(layers).forEach(layer => {
+                if (layer && map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // Add the appropriate layer
+            if (newScale === 'district' && layers.district) {
+                map.addLayer(layers.district);
+            } else if (newScale === 'grid' && layers.grid) {
+                map.addLayer(layers.grid);
+            } else if (newScale === 'building' && layers.building) {
+                map.addLayer(layers.building);
+            }
+
+            currentScale = newScale;
+            updateLegend();
+        }
+
+        // =====================
+        // Legend Update
+        // =====================
+        function updateLegend() {
+            const titleEl = document.getElementById('legendTitle');
+            const labelsEl = document.getElementById('legendLabels');
+            const scaleEl = document.getElementById('scaleIndicator');
+
+            if (currentScale === 'building') {
+                titleEl.textContent = 'Green Roof Potential (GPS)';
+                labelsEl.innerHTML = '<span>0</span><span>0.5</span><span>1</span>';
+                scaleEl.textContent = 'Buildings';
+            } else if (currentScale === 'grid') {
+                const maxArea = maxAreaValues.grid[currentScenario];
+                titleEl.textContent = 'Suitable Roof Area (km²)';
+                labelsEl.innerHTML = `<span>0</span><span>${formatNumber(maxArea/2, 3)}</span><span>${formatNumber(maxArea, 3)}</span>`;
+                scaleEl.textContent = 'Grid Cells';
+            } else {
+                const maxArea = maxAreaValues.district[currentScenario];
+                titleEl.textContent = 'Suitable Roof Area (km²)';
+                labelsEl.innerHTML = `<span>0</span><span>${formatNumber(maxArea/2, 3)}</span><span>${formatNumber(maxArea, 3)}</span>`;
+                scaleEl.textContent = 'Districts';
+            }
+        }
+
+        // =====================
+        // Scenario Switching
+        // =====================
+        function switchScenario(scenario) {
+            currentScenario = scenario;
+
+            // Update button states
+            document.querySelectorAll('.scenario-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.scenario == scenario);
+            });
+
+            // Recreate layers with new scenario data
+            layers.district = createDistrictLayer();
+            layers.grid = createGridLayer();
+            layers.building = createBuildingLayer();
+
+            // Update visible layer
+            updateVisibleLayer();
+        }
+
+        // =====================
+        // Data Loading
+        // =====================
+        function calculateMaxAreaValues() {
+            // Calculate max values for districts
+            if (data.districts) {
+                for (let s = 1; s <= 3; s++) {
+                    const field = `suitable_area_km2_${s}`;
+                    let max = 0;
+                    data.districts.features.forEach(f => {
+                        if (f.properties[field] > max) max = f.properties[field];
+                    });
+                    maxAreaValues.district[s] = max || 1;
+                }
+            }
+
+            // Calculate max values for grids
+            if (data.grids) {
+                for (let s = 1; s <= 3; s++) {
+                    const field = `suitable_area_km2_${s}`;
+                    let max = 0;
+                    data.grids.features.forEach(f => {
+                        if (f.properties[field] > max) max = f.properties[field];
+                    });
+                    maxAreaValues.grid[s] = max || 1;
+                }
+            }
+        }
+
+        async function loadData() {
+            try {
+                // Load all data files in parallel
+                const [districtsRes, gridsRes, buildings1Res, buildings2Res, buildings3Res] = await Promise.all([
+                    fetch(CONFIG.dataFiles.districts),
+                    fetch(CONFIG.dataFiles.grids),
+                    fetch(CONFIG.dataFiles.buildings[1]),
+                    fetch(CONFIG.dataFiles.buildings[2]),
+                    fetch(CONFIG.dataFiles.buildings[3])
+                ]);
+
+                // Parse JSON
+                data.districts = await districtsRes.json();
+                data.grids = await gridsRes.json();
+                data.buildings[1] = await buildings1Res.json();
+                data.buildings[2] = await buildings2Res.json();
+                data.buildings[3] = await buildings3Res.json();
+
+                // Calculate max area values for normalization
+                calculateMaxAreaValues();
+
+                // Create initial layers
+                layers.district = createDistrictLayer();
+                layers.grid = createGridLayer();
+                layers.building = createBuildingLayer();
+
+                // Show appropriate layer
+                updateVisibleLayer();
+
+                // Hide loading overlay
+                document.getElementById('loadingOverlay').classList.add('hidden');
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.loading-text').textContent = 'Error loading map data. Please refresh.';
+            }
+        }
+
+        // =====================
+        // Map Initialization
+        // =====================
+        function initMap() {
+            map = L.map('map', {
+                center: CONFIG.mapCenter,
+                zoom: CONFIG.initialZoom,
+                minZoom: CONFIG.minZoom,
+                maxZoom: CONFIG.maxZoom,
+                zoomControl: true
+            });
+
+            // Dark tile layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            // Zoom event listener
+            map.on('zoomend', updateVisibleLayer);
+
+            // Load data
+            loadData();
+        }
+
+        // =====================
+        // UI Event Handlers
+        // =====================
+        function initUI() {
+            // Scenario buttons
+            document.querySelectorAll('.scenario-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    switchScenario(parseInt(btn.dataset.scenario));
+                });
+            });
+
+            // Info panel
+            const infoOverlay = document.getElementById('infoOverlay');
+            const infoBtn = document.getElementById('infoBtn');
+            const exploreBtn = document.getElementById('exploreBtn');
+
+            infoBtn.addEventListener('click', () => {
+                infoOverlay.classList.add('visible');
+            });
+
+            exploreBtn.addEventListener('click', () => {
+                infoOverlay.classList.remove('visible');
+            });
+
+            infoOverlay.addEventListener('click', (e) => {
+                if (e.target === infoOverlay) {
+                    infoOverlay.classList.remove('visible');
+                }
+            });
+
+            // Show info panel on first visit
+            if (!localStorage.getItem('bgrMapVisited')) {
+                setTimeout(() => {
+                    infoOverlay.classList.add('visible');
+                    localStorage.setItem('bgrMapVisited', 'true');
+                }, 1000);
+            }
+        }
+
+        // =====================
+        // Initialize Application
+        // =====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            initUI();
+        });
+    </script>
+</body>
+</html>
