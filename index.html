@@ -58,7 +58,7 @@
         }
 
         .legend-gradient.potential {
-            background: linear-gradient(to right, #f7fcf5, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #005a32);
+            background: linear-gradient(to right, #d73027, #f46d43, #fdae61, #fee08b, #d9ef8b, #a6d96a, #66bd63, #1a9850);
         }
 
         .legend-labels {
@@ -312,7 +312,7 @@
             flex: 1;
             height: 12px;
             border-radius: 3px;
-            background: linear-gradient(to right, #f7fcf5, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #005a32);
+            background: linear-gradient(to right, #d73027, #f46d43, #fdae61, #fee08b, #d9ef8b, #a6d96a, #66bd63, #1a9850);
         }
 
         .color-preview-labels {
@@ -630,15 +630,16 @@
             }
         };
 
-        // Color scale for potential (0-1 or area-based) - Green palette
+        // Color scale for potential (0-1 or area-based) - Red to Green palette
         const colorScale = [
-            { threshold: 0, color: '#f7fcf5' },
-            { threshold: 0.15, color: '#c7e9c0' },
-            { threshold: 0.3, color: '#a1d99b' },
-            { threshold: 0.45, color: '#74c476' },
-            { threshold: 0.6, color: '#41ab5d' },
-            { threshold: 0.75, color: '#238b45' },
-            { threshold: 0.9, color: '#005a32' }
+            { threshold: 0, color: '#d73027' },
+            { threshold: 0.143, color: '#f46d43' },
+            { threshold: 0.286, color: '#fdae61' },
+            { threshold: 0.429, color: '#fee08b' },
+            { threshold: 0.571, color: '#d9ef8b' },
+            { threshold: 0.714, color: '#a6d96a' },
+            { threshold: 0.857, color: '#66bd63' },
+            { threshold: 1.0, color: '#1a9850' }
         ];
 
         // =====================
@@ -663,7 +664,11 @@
         // Helper Functions
         // =====================
         function getColor(value, maxValue = 1) {
-            const normalized = Math.min(value / maxValue, 1);
+            if (value === undefined || value === null || isNaN(value)) {
+                return colorScale[0].color;
+            }
+            const normalized = Math.max(0, Math.min(value / maxValue, 1));
+            // Find the appropriate color bucket
             for (let i = colorScale.length - 1; i >= 0; i--) {
                 if (normalized >= colorScale[i].threshold) {
                     return colorScale[i].color;
@@ -713,7 +718,7 @@
         function getDistrictPopup(properties) {
             const areaField = `suitable_area_km2_${currentScenario}`;
             const area = properties[areaField];
-            const name = properties.district || properties.name || properties.NAME || 'Unknown District';
+            const name = properties.District || properties.district || properties.name || properties.NAME || 'Unknown District';
             return `
                 <div class="popup-title">${name}</div>
                 <div class="popup-row">
@@ -731,13 +736,13 @@
         // Layer Styles
         // =====================
         function getBuildingStyle(feature) {
-            const gps = feature.properties.GPS_roof || 0;
+            const gps = parseFloat(feature.properties.GPS_roof) || 0;
             return {
                 fillColor: getColor(gps, 1),
                 weight: 0.5,
                 opacity: 1,
                 color: 'rgba(255, 255, 255, 0.3)',
-                fillOpacity: 0.8
+                fillOpacity: 0.85
             };
         }
 
