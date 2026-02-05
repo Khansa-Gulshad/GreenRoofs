@@ -772,14 +772,15 @@
         // =====================
         const CONFIG = {
             mapCenter: [54.372, 18.638],
-            initialZoom: 11,
+            initialZoom: 10,
             minZoom: 10,
             maxZoom: 18,
             zoomThresholds: {
-                building: 11    // zoom < 11 shows districts, >= 11 shows buildings
+                building: 12    // zoom < 12 shows districts, >= 12 shows buildings
             },
             dataFiles: {
                 districts: 'data/combined_gdansk_districts_roof.geojson',
+                boundary: 'data/boundary.geojson',
                 buildings: {
                     1: 'data/filtered_buildings_scenario1.geojson',
                     2: 'data/filtered_buildings_scenario2.geojson',
@@ -808,10 +809,12 @@
         let currentScale = 'district';
         let layers = {
             district: null,
-            building: null
+            building: null,
+            boundary: null
         };
         let data = {
             districts: null,
+            boundary: null,
             buildings: { 1: null, 2: null, 3: null }
         };
         let maxAreaValues = {
@@ -956,6 +959,20 @@
             });
         }
 
+        function createBoundaryLayer() {
+            if (!data.boundary) return null;
+            return L.geoJSON(data.boundary, {
+                style: {
+                    fillColor: 'transparent',
+                    fillOpacity: 0,
+                    weight: 2,
+                    color: '#4ecdc4',
+                    opacity: 0.8,
+                    dashArray: '5, 5'
+                }
+            });
+        }
+
         function updateVisibleLayer() {
             const zoom = map.getZoom();
             let newScale;
@@ -973,12 +990,21 @@
             if (layers.building && map.hasLayer(layers.building)) {
                 map.removeLayer(layers.building);
             }
+            if (layers.boundary && map.hasLayer(layers.boundary)) {
+                map.removeLayer(layers.boundary);
+            }
 
             // Add only the appropriate layer
             if (newScale === 'district' && layers.district) {
                 map.addLayer(layers.district);
-            } else if (newScale === 'building' && layers.building) {
-                map.addLayer(layers.building);
+            } else if (newScale === 'building') {
+                if (layers.building) {
+                    map.addLayer(layers.building);
+                }
+                // Add boundary layer together with buildings
+                if (layers.boundary) {
+                    map.addLayer(layers.boundary);
+                }
             }
 
             currentScale = newScale;
@@ -1019,6 +1045,7 @@
             // Recreate layers with new scenario data
             layers.district = createDistrictLayer();
             layers.building = createBuildingLayer();
+            layers.boundary = createBoundaryLayer();
 
             // Update visible layer
             updateVisibleLayer();
@@ -1044,8 +1071,9 @@
         async function loadData() {
             try {
                 // Load all data files in parallel
-                const [districtsRes, buildings1Res, buildings2Res, buildings3Res] = await Promise.all([
+                const [districtsRes, boundaryRes, buildings1Res, buildings2Res, buildings3Res] = await Promise.all([
                     fetch(CONFIG.dataFiles.districts),
+                    fetch(CONFIG.dataFiles.boundary),
                     fetch(CONFIG.dataFiles.buildings[1]),
                     fetch(CONFIG.dataFiles.buildings[2]),
                     fetch(CONFIG.dataFiles.buildings[3])
@@ -1053,6 +1081,7 @@
 
                 // Parse JSON
                 data.districts = await districtsRes.json();
+                data.boundary = await boundaryRes.json();
                 data.buildings[1] = await buildings1Res.json();
                 data.buildings[2] = await buildings2Res.json();
                 data.buildings[3] = await buildings3Res.json();
@@ -1063,17 +1092,13 @@
                 // Create initial layers
                 layers.district = createDistrictLayer();
                 layers.building = createBuildingLayer();
+                layers.boundary = createBoundaryLayer();
 
                 // Show appropriate layer
                 updateVisibleLayer();
 
                 // Hide loading overlay
                 document.getElementById('loadingOverlay').classList.add('hidden');
-
-                // Show info panel after data loads
-                setTimeout(() => {
-                    document.getElementById('infoOverlay').classList.add('visible');
-                }, 500);
 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -1084,7 +1109,7 @@
         // =====================
         // Map Initialization
         // =====================
-        function initMap() {
+        async function initMap() {
             map = L.map('map', {
                 center: CONFIG.mapCenter,
                 zoom: CONFIG.initialZoom,
@@ -1093,18 +1118,19 @@
                 zoomControl: true
             });
 
-            // Dark tile layer
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
+            // Mapbox dark tile layer
+            L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v10/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia2hhbnNhZ3VsIiwiYSI6ImNtOGhqcWdqMDAyb2kybHI1Mnl2MHhwYjgifQ.9Je73sehr801s1_IynnRgw', {
+                attribution: '© Mapbox © OpenStreetMap | Icons by <a href="https://icons8.com" target="_blank">Icons8</a>',
+                maxZoom: 19,
+                tileSize: 512,
+                zoomOffset: -1
             }).addTo(map);
 
             // Zoom event listener
             map.on('zoomend', updateVisibleLayer);
 
             // Load data
-            loadData();
+            await loadData();
         }
 
         // =====================
@@ -1153,6 +1179,9 @@
         // Initialize Application
         // =====================
         document.addEventListener('DOMContentLoaded', () => {
+            // Show info panel immediately
+            document.getElementById('infoOverlay').classList.add('visible');
+
             initMap();
             initUI();
         });
