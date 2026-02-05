@@ -58,7 +58,7 @@
         }
 
         .legend-gradient.potential {
-            background: linear-gradient(to right, #fee5d9, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #99000d);
+            background: linear-gradient(to right, #f7fcf5, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #005a32);
         }
 
         .legend-labels {
@@ -312,7 +312,7 @@
             flex: 1;
             height: 12px;
             border-radius: 3px;
-            background: linear-gradient(to right, #fee5d9, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #99000d);
+            background: linear-gradient(to right, #f7fcf5, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #005a32);
         }
 
         .color-preview-labels {
@@ -545,13 +545,6 @@
                     </div>
                 </div>
                 <div class="info-item">
-                    <span class="icon">📊</span>
-                    <div class="info-item-content">
-                        <div class="info-item-title">Medium zoom → Grids</div>
-                        <div class="info-item-desc">View 500m grid cell analysis</div>
-                    </div>
-                </div>
-                <div class="info-item">
                     <span class="icon">🏠</span>
                     <div class="info-item-content">
                         <div class="info-item-title">Zoom in → Buildings</div>
@@ -625,12 +618,10 @@
             minZoom: 10,
             maxZoom: 18,
             zoomThresholds: {
-                district: 12,   // zoom < 12 shows districts
-                grid: 14        // zoom >= 12 and < 14 shows grids, >= 14 shows buildings
+                building: 14    // zoom < 14 shows districts, >= 14 shows buildings
             },
             dataFiles: {
                 districts: 'data/combined_gdansk_districts_roof.geojson',
-                grids: 'data/combined_gdansk_grid.geojson',
                 buildings: {
                     1: 'data/filtered_buildings_scenario1.geojson',
                     2: 'data/filtered_buildings_scenario2.geojson',
@@ -639,15 +630,15 @@
             }
         };
 
-        // Color scale for potential (0-1 or area-based)
+        // Color scale for potential (0-1 or area-based) - Green palette
         const colorScale = [
-            { threshold: 0, color: '#fee5d9' },
-            { threshold: 0.15, color: '#fcbba1' },
-            { threshold: 0.3, color: '#fc9272' },
-            { threshold: 0.45, color: '#fb6a4a' },
-            { threshold: 0.6, color: '#ef3b2c' },
-            { threshold: 0.75, color: '#cb181d' },
-            { threshold: 0.9, color: '#99000d' }
+            { threshold: 0, color: '#f7fcf5' },
+            { threshold: 0.15, color: '#c7e9c0' },
+            { threshold: 0.3, color: '#a1d99b' },
+            { threshold: 0.45, color: '#74c476' },
+            { threshold: 0.6, color: '#41ab5d' },
+            { threshold: 0.75, color: '#238b45' },
+            { threshold: 0.9, color: '#005a32' }
         ];
 
         // =====================
@@ -658,17 +649,14 @@
         let currentScale = 'district';
         let layers = {
             district: null,
-            grid: null,
             building: null
         };
         let data = {
             districts: null,
-            grids: null,
             buildings: { 1: null, 2: null, 3: null }
         };
         let maxAreaValues = {
-            district: { 1: 1, 2: 1, 3: 1 },
-            grid: { 1: 1, 2: 1, 3: 1 }
+            district: { 1: 1, 2: 1, 3: 1 }
         };
 
         // =====================
@@ -722,26 +710,10 @@
             `;
         }
 
-        function getGridPopup(properties) {
-            const areaField = `suitable_area_km2_${currentScenario}`;
-            const area = properties[areaField];
-            return `
-                <div class="popup-title">Grid Cell</div>
-                <div class="popup-row">
-                    <span class="popup-label">Suitable Roof Area</span>
-                    <span class="popup-value highlight">${formatNumber(area, 4)} km²</span>
-                </div>
-                <div class="popup-row">
-                    <span class="popup-label">Scenario</span>
-                    <span class="popup-value">${currentScenario}</span>
-                </div>
-            `;
-        }
-
         function getDistrictPopup(properties) {
             const areaField = `suitable_area_km2_${currentScenario}`;
             const area = properties[areaField];
-            const name = properties.name || properties.NAME || properties.district || 'District';
+            const name = properties.district || properties.name || properties.NAME || 'Unknown District';
             return `
                 <div class="popup-title">${name}</div>
                 <div class="popup-row">
@@ -766,19 +738,6 @@
                 opacity: 1,
                 color: 'rgba(255, 255, 255, 0.3)',
                 fillOpacity: 0.8
-            };
-        }
-
-        function getGridStyle(feature) {
-            const areaField = `suitable_area_km2_${currentScenario}`;
-            const area = feature.properties[areaField] || 0;
-            const maxArea = maxAreaValues.grid[currentScenario];
-            return {
-                fillColor: getColor(area, maxArea),
-                weight: 1,
-                opacity: 1,
-                color: 'rgba(255, 255, 255, 0.4)',
-                fillOpacity: 0.75
             };
         }
 
@@ -816,24 +775,6 @@
             });
         }
 
-        function createGridLayer() {
-            if (!data.grids) return null;
-            return L.geoJSON(data.grids, {
-                style: getGridStyle,
-                onEachFeature: (feature, layer) => {
-                    layer.bindPopup(getGridPopup(feature.properties));
-                    layer.on({
-                        mouseover: (e) => {
-                            e.target.setStyle({ weight: 2, color: '#4ecdc4' });
-                        },
-                        mouseout: (e) => {
-                            layers.grid.resetStyle(e.target);
-                        }
-                    });
-                }
-            });
-        }
-
         function createBuildingLayer() {
             if (!data.buildings[currentScenario]) return null;
             return L.geoJSON(data.buildings[currentScenario], {
@@ -856,26 +797,23 @@
             const zoom = map.getZoom();
             let newScale;
 
-            if (zoom < CONFIG.zoomThresholds.district) {
+            if (zoom < CONFIG.zoomThresholds.building) {
                 newScale = 'district';
-            } else if (zoom < CONFIG.zoomThresholds.grid) {
-                newScale = 'grid';
             } else {
                 newScale = 'building';
             }
 
-            // Remove all layers first
-            Object.values(layers).forEach(layer => {
-                if (layer && map.hasLayer(layer)) {
-                    map.removeLayer(layer);
-                }
-            });
+            // Remove all layers first - completely remove from map
+            if (layers.district && map.hasLayer(layers.district)) {
+                map.removeLayer(layers.district);
+            }
+            if (layers.building && map.hasLayer(layers.building)) {
+                map.removeLayer(layers.building);
+            }
 
-            // Add the appropriate layer
+            // Add only the appropriate layer
             if (newScale === 'district' && layers.district) {
                 map.addLayer(layers.district);
-            } else if (newScale === 'grid' && layers.grid) {
-                map.addLayer(layers.grid);
             } else if (newScale === 'building' && layers.building) {
                 map.addLayer(layers.building);
             }
@@ -896,11 +834,6 @@
                 titleEl.textContent = 'Green Roof Potential (GPS)';
                 labelsEl.innerHTML = '<span>0</span><span>0.5</span><span>1</span>';
                 scaleEl.textContent = 'Buildings';
-            } else if (currentScale === 'grid') {
-                const maxArea = maxAreaValues.grid[currentScenario];
-                titleEl.textContent = 'Suitable Roof Area (km²)';
-                labelsEl.innerHTML = `<span>0</span><span>${formatNumber(maxArea/2, 3)}</span><span>${formatNumber(maxArea, 3)}</span>`;
-                scaleEl.textContent = 'Grid Cells';
             } else {
                 const maxArea = maxAreaValues.district[currentScenario];
                 titleEl.textContent = 'Suitable Roof Area (km²)';
@@ -922,7 +855,6 @@
 
             // Recreate layers with new scenario data
             layers.district = createDistrictLayer();
-            layers.grid = createGridLayer();
             layers.building = createBuildingLayer();
 
             // Update visible layer
@@ -944,26 +876,13 @@
                     maxAreaValues.district[s] = max || 1;
                 }
             }
-
-            // Calculate max values for grids
-            if (data.grids) {
-                for (let s = 1; s <= 3; s++) {
-                    const field = `suitable_area_km2_${s}`;
-                    let max = 0;
-                    data.grids.features.forEach(f => {
-                        if (f.properties[field] > max) max = f.properties[field];
-                    });
-                    maxAreaValues.grid[s] = max || 1;
-                }
-            }
         }
 
         async function loadData() {
             try {
                 // Load all data files in parallel
-                const [districtsRes, gridsRes, buildings1Res, buildings2Res, buildings3Res] = await Promise.all([
+                const [districtsRes, buildings1Res, buildings2Res, buildings3Res] = await Promise.all([
                     fetch(CONFIG.dataFiles.districts),
-                    fetch(CONFIG.dataFiles.grids),
                     fetch(CONFIG.dataFiles.buildings[1]),
                     fetch(CONFIG.dataFiles.buildings[2]),
                     fetch(CONFIG.dataFiles.buildings[3])
@@ -971,7 +890,6 @@
 
                 // Parse JSON
                 data.districts = await districtsRes.json();
-                data.grids = await gridsRes.json();
                 data.buildings[1] = await buildings1Res.json();
                 data.buildings[2] = await buildings2Res.json();
                 data.buildings[3] = await buildings3Res.json();
@@ -981,7 +899,6 @@
 
                 // Create initial layers
                 layers.district = createDistrictLayer();
-                layers.grid = createGridLayer();
                 layers.building = createBuildingLayer();
 
                 // Show appropriate layer
